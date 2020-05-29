@@ -24,7 +24,7 @@ In case the live demo goes down for whatever reason, the component is supposed t
 
 To install this library with npm, run below command:
 ```
-$ npm install --save angular-formio jsoneditor ngx-bootstrap @angular/elements @davebaol/formio-editor
+$ npm install --save angular-formio jsoneditor ngx-bootstrap @angular/elements @davebaol/angular-formio-editor
 ```
 
 Example:
@@ -40,7 +40,7 @@ To use this component in your Angular application follow the steps below:
 :one: Import Angular module `FormioEditorModule` as below:
 
 ```ts
-import { FormioEditorModule } from '@davebaol/formio-editor'; 
+import { FormioEditorModule } from '@davebaol/angular-formio-editor'; 
 
 @NgModule({
   declarations: [
@@ -59,7 +59,7 @@ export class AppModule { }
 
 ```ts
 import { Component } from '@angular/core';
-import { FormioEditorOptions } from '@davebaol/formio-editor';
+import { FormioEditorOptions } from '@davebaol/angular-formio-editor';
 
 @Component({
   selector: 'app-root',
@@ -82,12 +82,17 @@ export class AppComponent {
       components: []
     };
     this.options = {
+      tabs: ['builder', 'json', 'renderer'], // set allowed tabs
+      tab: 'builder', // set default tab
       builder: {
         hideDisplaySelect: true
       },
       json: {
-        modes = ['code', 'tree', 'view']; // set allowed modes
-        mode = 'view'; // set default mode
+        changePanelLocations: ['top', 'bottom'],
+        editor: {
+          modes: ['code', 'tree', 'view'], // set allowed modes
+          mode: 'view' // set default mode
+        }
       }
     };
   }
@@ -98,7 +103,7 @@ export class AppComponent {
 @import "./styles/bootstrap/css/bootstrap.min.css";
 @import '~font-awesome/css/font-awesome.min.css';
 @import "~jsoneditor/dist/jsoneditor.min.css";
-@import "~@davebaol/formio-editor/styles.css";
+@import "~@davebaol/angular-formio-editor/styles.css";
 ```
 Note that this library only needs the `.css` from bootstrap, not the `.js`, since `ngx-bootstrap` is used internally.
 So you don't have necessarily to add bootstrap and its peer dependency jQuery. 
