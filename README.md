@@ -6,7 +6,13 @@ This Angular component provides [Form.io](https://www.form.io/) builder and rend
 
 It works with latest Angular 9.
 
-## Try the [Live Demo](https://davebaol.github.io/angular-formio-editor/)
+Example:
+
+```html
+<formio-editor [form]="form" [options]="options"></formio-editor>
+```
+
+## Try the Live Demos: [Demo Dev](https://davebaol.github.io/angular-formio-editor/) and [Demo Stable](https://davebaol.github.io/angular-formio-editor-demo/)
 
 In case the live demo goes down for whatever reason, the component is supposed to look somewhat like this (click any image to enlarge it):
 <table>
@@ -26,12 +32,34 @@ To install this library with npm, run below command:
 ```
 $ npm install --save angular-formio jsoneditor ngx-bootstrap @angular/elements @davebaol/angular-formio-editor
 ```
+Yes, you have to install 5 packages!!! :scream:
 
-Example:
-
-```html
-<formio-editor [form]="form" [options]="options"></formio-editor>
+Having in mind the dependency graph can be useful for choosing the version of the various packages for your application. :wink:
+<details>
+  <summary><b>Peer dependency graph</b> 👈</summary>
+    
+<br/><p align="center">
+  <img alt="Peer dependencies graph" src="https://user-images.githubusercontent.com/2366334/83365783-0b260e80-a3ab-11ea-8197-e463625dfd15.png">
+</p>
+<!--
+```mermaid
+graph TD
+  subgraph Legend
+   START[ ]-.->|has peer dependency|STOP[ ]
+   style START fill:#FFFFFF00, stroke:#FFFFFF00;
+   style STOP  fill:#FFFFFF00, stroke:#FFFFFF00;
+  end
+  davebaol-angular-formio-editor("@davebaol/angular-formio-editor")
+  davebaol-angular-formio-editor-.->jsoneditor
+  davebaol-angular-formio-editor-.->angular-formio
+  davebaol-angular-formio-editor-.->ngx-bootstrap
+  angular-formio-.->ngx-bootstrap
+  angular-formio-.->angular-elements("@angular/elements")
 ```
+-->
+
+</details>
+
 
 ## Usage
 
@@ -82,23 +110,34 @@ export class AppComponent {
       components: []
     };
     this.options = {
-      tabs: ['builder', 'json', 'renderer'], // set allowed tabs
-      tab: 'builder', // set default tab
       builder: {
-        hideDisplaySelect: true
+        hideDisplaySelect: true,
+        output: {
+          change: (event) => console.log('Demo: builder change event:', event),
+        }
       },
       json: {
         changePanelLocations: ['top', 'bottom'],
-        editor: {
-          modes: ['code', 'tree', 'view'], // set allowed modes
-          mode: 'view' // set default mode
+        input: {
+          options: {
+            modes: ['code', 'tree', 'view'], // set allowed modes
+            mode: 'view' // set default mode
+          }
+        }
+      },
+      renderer: {
+        input: {
+          options: {
+            src: 'http://localhost:8765/api/v1/documents',
+            renderOptions: { breadcrumbSettings: { clickable: true } }
+          }
         }
       }
     };
   }
 }
 ```
-:three: For better styling, add the lines below to your main style.css file
+:three: To properly style this component, import the `.css` files below into your main `style.css` file
 ```css
 @import "./styles/bootstrap/css/bootstrap.min.css";
 @import '~font-awesome/css/font-awesome.min.css';
@@ -108,7 +147,7 @@ export class AppComponent {
 Note that this library only needs the `.css` from bootstrap, not the `.js`, since `ngx-bootstrap` is used internally.
 So you don't have necessarily to add bootstrap and its peer dependency jQuery.
 
-## Troubleshooting
+:four: Troubleshooting
 
 - If during `ng build` execution you encounter this error
   ```
@@ -116,6 +155,111 @@ So you don't have necessarily to add bootstrap and its peer dependency jQuery.
   An unhandled exception occurred: Call retries were exceeded
   ```
   make sure you're using node 12+. If this does not work for you then try the other possible solutions mentioned [here](https://github.com/angular/angular-cli/issues/15493).
+
+## Documentation
+
+The component supports the input arguments `form`, `options` and `reset` described below:
+
+- **form**<br/>
+This is a regular form defined by the form.io framework. The component modifies this argument in place. 
+- **options**<br/>
+The options have 3 properties, one for each tab of the component: `builder`, `json`, `renderer`.
+Open the spoilers to see the details.
+  - <details><summary><b>options.builder</b> 👈</summary>
+
+    ```javascript
+    {
+      // Whether to hide the builder tab or not. Defaults to false.
+      hideTab: false,
+      // Specify if the builder is the active tab at component startup. Defaults to true. 
+      defaultTab: true,
+      // Whether to hide or not the embedded select to change the form display. Defaults to false. 
+      hideDisplaySelect: false,
+
+      // Input and output arguments of the component <formio-builder>.
+      // Refer to the official documentation.
+      input: {},
+      output: {}
+    }
+    ```
+    </details>
+  - <details><summary><b>options.json</b> 👈</summary>
+
+    ```javascript
+    {
+      // Whether to hide the json tab or not. Defaults to false.
+      hideTab: false,
+      // Specify if json is the active tab at component startup. Defaults to false.
+      defaultTab: false,
+      // The locations relative to the json editor where to show the panel
+      // for applying json changes to the form. Defaults to ['top', 'bottom'].
+      changePanelLocations: ['top', 'bottom'],
+
+      // Input arguments of the component <json-editor>.
+      input: {
+        // Note that these options are only intended as a component setup at creation-time.
+        options: {
+          // Whether to expand or not all nodes in tree mode. This is an additional option
+          // not supported by the original jsoneditor. Defaults to false.
+          expandAll: false,
+
+          // Other options supported by the original jsoneditor.
+          // See jsoneditor API documentation at the link below
+          // https://github.com/josdejong/jsoneditor/blob/master/docs/api.md#configuration-options
+          ...
+        }
+      },
+      // Output arguments of the component <json-editor>.
+      output: {
+        dataChange: (event: any) => {}
+        dataError: (event: any) => {}
+      }
+    }
+    ```
+    </details>
+  - <details><summary><b>options.renderer</b> 👈</summary>
+
+    ```javascript
+    {
+      // Whether to hide the renderer tab or not. Defaults to false.
+      hideTab: false,
+      // Specify if renderer is the active tab at component startup. Defaults to false.
+      defaultTab: false,
+      // Configuration of the submission panel.
+      submissionPanel: {
+        // Whether to show the submission panel or not. Default to false.
+        disabled: false,
+        // Whether to initially show full or partial submission. Default to false.
+        fullSubmission: false,
+        // The json editor of the submitted resource.
+        resourceJsonEditor: {
+          // Input and output arguments of this component <json-editor>.
+          // See options.json.input and options.json.output above.
+          input: {},
+          output: {}
+        },
+        // The json editor of the json schema for the submitted resource
+        schemaJsonEditor: {
+          // Whether to show or not the schema json editor. Defaults to false.
+          enabled: true,
+          // Input and output arguments of this component <json-editor>.
+          // See options.json.input and options.json.output above.
+          input: {},
+          output: {}
+          }
+        }
+      },
+      // Input and output arguments of the component <formio> that renders the form.
+      // Refer to the official documentation.
+      input: {},
+      output: {}
+    }
+    ```
+    </details>
+- **reset**<br/>
+  An `Observable<void>` to reset the component. 
+
+</details>
 
 ## License
 

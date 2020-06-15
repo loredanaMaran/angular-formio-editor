@@ -14,21 +14,39 @@ export class AppComponent {
   form: any;
   options: FormioEditorOptions;
   resetFormioEditor$ = new Subject<void>();
-  alive = true;
 
   constructor() {
     this.form = form;
 
     this.options = {
       builder: {
-        hideDisplaySelect: false
+        hideDisplaySelect: false,
+        output: {
+          change: (event) => console.log('Demo: builder change event:', event),
+        }
       },
-      json: {}
+      json: {},
+      renderer: {
+        input: {
+          src: 'http://localhost:8383/api/v1/documents',
+          renderOptions: { breadcrumbSettings: { clickable: true } }
+        },
+        submissionPanel: {
+          disabled: false,
+          fullSubmission: true,
+          resourceJsonEditor: {
+            input: {
+              options: {}
+            }
+          },
+          schemaJsonEditor: {
+            enabled: false,
+            input: {
+              options: {}
+            }
+          }
+        }
+      }
     };
-  }
-
-  recreateFormioEditor() {
-    this.alive = false;
-    setTimeout(() => this.alive = true);
   }
 }

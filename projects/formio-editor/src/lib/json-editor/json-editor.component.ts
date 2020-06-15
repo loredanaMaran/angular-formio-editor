@@ -2,16 +2,17 @@ import { Component, OnInit, ViewChild, ElementRef, Input, Output, EventEmitter, 
 import JsonEditor from 'jsoneditor';
 import {
   JsonEditorOptions, JsonEditorMode, JsonEditorSelection, JsonEditorValidationError,
-  JsonEditorTextPosition, JsonEditorTextSelection, JsonEditorSerializableNode, jsonEditorNativeOptions, jsonEditorAdditionalOptions
+  JsonEditorTextPosition, JsonEditorTextSelection, JsonEditorSerializableNode,
+  JSON_EDITOR_NATIVE_OPTIONS, JSON_EDITOR_ADDITIONAL_OPTIONS, JSON_EDITOR_TREE_MODES
 } from './json-editor-shapes';
 
 // Check unsupported options
-let unsupportedOptions = JsonEditor.VALID_OPTIONS.filter(p => !jsonEditorNativeOptions.includes(p));
+let unsupportedOptions = JsonEditor.VALID_OPTIONS.filter(p => !JSON_EDITOR_NATIVE_OPTIONS.includes(p));
 if (unsupportedOptions.length > 0) {
   console.log('You\'re probably using a recent version of jsoneditor and the following options are not yet defined in JsonEditorNativeOptions', unsupportedOptions);
   console.log('However, you can still pass these options using TypeScript type assertion \'as JsonEditorOptions\'');
 }
-unsupportedOptions = jsonEditorNativeOptions.filter(p => !JsonEditor.VALID_OPTIONS.includes(p));
+unsupportedOptions = JSON_EDITOR_NATIVE_OPTIONS.filter(p => !JsonEditor.VALID_OPTIONS.includes(p));
 if (unsupportedOptions.length > 0) {
   console.log('You\'re probably using an old version of jsoneditor that doesn\'t support the following options', unsupportedOptions);
 }
@@ -50,7 +51,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  private createEditor(options: JsonEditorOptions) {
+  private createEditor(options: JsonEditorOptions, mode?: JsonEditorMode) {
     // Store original options passed in
     this._options = options;
 
@@ -62,7 +63,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy {
     const editorOptions = Object.assign({}, options, patchedOptions);
 
     // Extract additional options not supported by the original jsoneditor
-    const additionalOptions: JsonEditorOptions = jsonEditorAdditionalOptions.reduce((opts, k) => {
+    const additionalOptions: JsonEditorOptions = JSON_EDITOR_ADDITIONAL_OPTIONS.reduce((opts, k) => {
       opts[k] = editorOptions[k];
       delete editorOptions[k];
       return opts;
@@ -77,7 +78,11 @@ export class JsonEditorComponent implements OnInit, OnDestroy {
     }
     this.editor = new JsonEditor(this.jsonEditorContainer.nativeElement, editorOptions, {});
 
-    if (additionalOptions.expandAll) {
+    if (mode) {
+      this.setMode(mode);
+    }
+
+    if (additionalOptions.expandAll && JSON_EDITOR_TREE_MODES.includes(this.getMode())) {
       this.editor.expandAll();
     }
   }
@@ -100,10 +105,9 @@ export class JsonEditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  public resetMode() {
-    const mode = this.getMode();
-    this.setMode(mode === 'view' ? 'text' : 'view');
-    this.setMode(mode);
+  public reset(preserveMode = false) {
+    const mode = preserveMode ? this.getMode() : undefined;
+    this.createEditor(this.options, mode);
   }
 
   public isWellFormedJson() {

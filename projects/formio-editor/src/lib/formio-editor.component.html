@@ -17,30 +17,30 @@
   </div>
 </ng-template>
 <ul class="nav nav-tabs" id="myTab" role="tablist">
-  <li class="nav-item" *ngIf="options.tabs.includes('builder')">
-    <a class="nav-link" [ngClass]="{'active':activeTab=='builder'}" (click)="activeTab='builder'"
-       id="builder-tab" data-toggle="tab" href="#builder" role="tab" aria-controls="builder" aria-selected="true">
+  <li class="nav-item" *ngIf="options?.builder?.hideTab !== true">
+    <span class="nav-link" [ngClass]="{'active':activeTab=='builder'}" (click)="activeTab='builder'"
+       id="builder-tab" data-toggle="tab" data-target="#builder" role="tab" aria-controls="builder" aria-selected="true">
       Builder
-    </a>
+    </span>
   </li>
-  <li class="nav-item" *ngIf="options.tabs.includes('json')">
-    <a class="nav-link" [ngClass]="{'active':activeTab=='json'}" (click)="activeTab='json'"
-      id="json-editor-tab" data-toggle="tab" href="#json-editor" role="tab" aria-controls="json-editor"
+  <li class="nav-item" *ngIf="options?.json?.hideTab !== true">
+    <span class="nav-link" [ngClass]="{'active':activeTab=='json'}" (click)="activeTab='json'"
+      id="json-editor-tab" data-toggle="tab" data-target="#json-editor" role="tab" aria-controls="json-editor"
       aria-selected="false">
       Json
-    </a>
+    </span>
   </li>
-  <li class="nav-item" *ngIf="options.tabs.includes('renderer')">
-    <a class="nav-link" [ngClass]="{'active':activeTab=='renderer'}" (click)="activeTab='renderer'"
-        id="renderer-tab" data-toggle="tab" href="#renderer" role="tab" aria-controls="renderer" aria-selected="false">
+  <li class="nav-item" *ngIf="options?.renderer?.hideTab !== true">
+    <span class="nav-link" [ngClass]="{'active':activeTab=='renderer'}" (click)="activeTab='renderer'"
+        id="renderer-tab" data-toggle="tab" data-target="#renderer" role="tab" aria-controls="renderer" aria-selected="false">
       Renderer
-    </a>
+    </span>
   </li>
 </ul>
 <div class="tab-content" id="myTabContent">
   <div class="tab-pane fade" [ngClass]="{'show active':activeTab=='builder'}" id="builder" role="tabpanel" aria-labelledby="builder-tab">
     <div class="m-2">
-      <div *ngIf="!options.builder.hideDisplaySelect">
+      <div *ngIf="options?.builder?.hideDisplaySelect !== true">
         <label for="form-display-select" class="mx-2">Display as: </label>
         <select id="form-display-select" class="form-control my-2" style="display: inline-block; width: 150px;"
                 [(ngModel)]="form.display" (ngModelChange)="onBuilderDiplayChange($event)">
@@ -48,12 +48,18 @@
           <option value="wizard">Wizard</option>
         </select>
       </div>
-      <form-builder *ngIf="!builderDisplayChanged" [form]="form" (change)="onBuilderChange($event)"></form-builder>
+      <form-builder *ngIf="!builderDisplayChanged" [form]="form"
+        [options]="options?.builder?.input?.options"
+        [formbuilder]="options?.builder?.input?.formbuilder"
+        [noeval]="options?.builder?.input?.noeval"
+        [refresh]="options?.builder?.input?.refresh"
+        (change)="onBuilderChange($event); options?.builder?.output?.change ? options.builder.output.change($event) : undefined"
+      ></form-builder>
     </div>
   </div>
   <div class="tab-pane fade" [ngClass]="{'show active':activeTab=='json'}" id="json-editor" role="tabpanel" aria-labelledby="json-editor-tab">
     <div class="m-2 well">
-      <div class="row mx-0" *ngIf="options.json.changePanelLocations.includes('top')">
+      <div class="row mx-0" *ngIf="!options?.json?.changePanelLocations || options.json.changePanelLocations?.includes('top')">
         <div class="m-2 p-0">
           <button type="button" class="btn btn-success mr-4" (click)="onJsonEditorApply(saveModal)"
                   [disabled]="!jsonEditorChanged || jsonEditorErrors.length !== jsonEditorWarningCounter">
@@ -65,8 +71,12 @@
           Cannot apply changes. Json is not well-formed.
         </alert>
       </div>
-      <json-editor #jsoneditor [options]="options.json.editor" (dataChange)="onJsonEditorChange($event)" (dataError)="onJsonEditorError($event)"></json-editor>
-      <div class="row mx-0" *ngIf="options.json.changePanelLocations.includes('bottom')">
+      <json-editor #jsoneditor 
+        [options]="jsonEditorOptions"
+        (dataChange)="onJsonEditorChange($event); options?.json?.output?.dataChange ? options.json.output.dataChange($event) : undefined"
+        (dataError)="onJsonEditorError($event); options?.json?.output?.dataError ? options.json.output.dataError($event) : undefined"
+      ></json-editor>
+      <div class="row mx-0" *ngIf="!options?.json?.changePanelLocations || options.json.changePanelLocations?.includes('bottom')">
         <div class="m-2 p-0">
           <button type="button" class="btn btn-success mr-4" (click)="onJsonEditorApply(saveModal)"
                   [disabled]="!jsonEditorChanged || jsonEditorErrors.length !== jsonEditorWarningCounter">
@@ -75,15 +85,71 @@
           <button type="button" class="btn btn-secondary" (click)="jsonEditorDiscardChanges()">Discard</button>
         </div>
         <alert class="col-6 mx-4 my-2 p-1 align-middle" type="danger" [isOpen]="jsonEditorErrors.length !== jsonEditorWarningCounter" >
-          Cannot apply changes. Json is not well-formed.
+          Json is not well-formed. You won't be able to apply changes!
         </alert>
       </div>
     </div>
   </div>
   <div class="tab-pane fade" [ngClass]="{'show active':activeTab=='renderer'}" id="renderer" role="tabpanel" aria-labelledby="renderer-tab">
     <div class="m-2">
-      <formio *ngIf="activeTab=='renderer'" [form]="form"></formio>
+      <formio *ngIf="activeTab=='renderer'" [form]="form"
+        [submission]="options?.renderer?.input?.submission"
+        [src]="options?.renderer?.input?.src"
+        [url]="options?.renderer?.input?.url"
+        [service]="options?.renderer?.input?.service"
+        [options]="options?.renderer?.input?.options"
+        [noeval]="options?.renderer?.input?.noeval"
+        [formioOptions]="options?.renderer?.input?.formioOptions"
+        [renderOptions]="options?.renderer?.input?.renderOptions"
+        [readOnly]="options?.renderer?.input?.readOnly"
+        [viewOnly]="options?.renderer?.input?.viewOnly"
+        [hideComponents]="options?.renderer?.input?.hideComponents"
+        [refresh]="options?.renderer?.input?.refresh"
+        [success]="options?.renderer?.input?.success"
+        [language]="options?.renderer?.input?.language"
+        [hooks]="options?.renderer?.input?.hooks"
+        [renderer]="options?.renderer?.input?.renderer"
+        (render)="options?.renderer?.output?.render ? options.renderer.output.render($event) : undefined"
+        (customEvent)="options?.renderer?.output?.customEvent ? options.renderer.output.customEvent($event) : undefined"
+        (submit)="options?.renderer?.output?.submit ? options.renderer.output.submit($event) : undefined"
+        (prevPage)="options?.renderer?.output?.prevPage ? options.renderer.output.prevPage($event) : undefined"
+        (nextPage)="options?.renderer?.output?.nextPage ? options.renderer.output.nextPage($event) : undefined"
+        (beforeSubmit)="showSubmissionPanel($event); options?.renderer?.output?.beforeSubmit ? options.renderer.output.beforeSubmit($event) : undefined"
+        (change)="options?.renderer?.output?.change ? options.renderer.output.change($event) : undefined"
+        (invalid)="options?.renderer?.output?.invalid ? options.renderer.output.invalid($event) : undefined"
+        (errorChange)="options?.renderer?.output?.errorChange ? options.renderer.output.errorChange($event) : undefined"
+        (formLoad)="options?.renderer?.output?.formLoad ? options.renderer.output.formLoad($event) : undefined"
+        (submissionLoad)="options?.renderer?.output?.submissionLoad ? options.renderer.output.submissionLoad($event) : undefined"
+        (ready)="options?.renderer?.output?.ready ? options.renderer.output.ready($event) : undefined"
+      ></formio>
+    </div>
+    <div *ngIf="submissionPanel" class="m-2 border-top border-primary">
+      <div class="row mx-0">
+        <div class="p-2" [ngClass]="{'col-6':showResourceSchema,'col-12':!showResourceSchema}">
+          <p class="font-weight-bold text-center mb-1">
+            Summission (
+              <label for="fullSubmitCheckbox" class="my-0">full</label>
+              <input id="fullSubmitCheckbox" class="mx-1" type="checkbox" [(ngModel)]="fullSubmission" (change)="showSubmissionPanel(submission)">
+            )
+          </p>
+          <json-editor #renderer_resource_jsoneditor
+            [options]="rendererResourceJsonEditorOptions"
+            (dataChange)="options?.renderer?.submissionPanel?.resourceJsonEditor?.output?.dataChange ? options.renderer.submissionPanel.resourceJsonEditor.output.dataChange($event) : undefined"
+            (dataError)="options?.renderer?.submissionPanel?.resourceJsonEditor?.output?.dataError ? options.renderer.submissionPanel.resourceJsonEditor.output.dataError($event) : undefined"
+          ></json-editor>
+        </div>
+        <div class="p-2 col-6" [hidden]=!showResourceSchema>
+          <p class="font-weight-bold text-center mb-1">Json Schema Validator</p>
+          <json-editor #renderer_schema_jsoneditor
+            [options]="rendererSchemaJsonEditorOptions"
+            (dataChange)="options?.renderer?.submissionPanel?.schemaJsonEditor?.output?.dataChange ? options.renderer.submissionPanel.schemaJsonEditor.output.dataChange($event) : undefined"
+            (dataError)="options?.renderer?.submissionPanel?.schemaJsonEditor?.output?.dataError ? options.renderer.submissionPanel.schemaJsonEditor.output.dataError($event) : undefined"
+          ></json-editor>
+        </div>
+      </div>
+      <button class="mx-3 btn btn-primary" *ngIf="options?.renderer?.submissionPanel?.schemaJsonEditor?.enabled" (click)="showResourceSchema = !showResourceSchema">{{showResourceSchema? 'Hide Schema' : 'Show Schema'}}</button>
+      <button class="mx-2 btn btn-primary" *ngIf="options?.renderer?.submissionPanel?.schemaJsonEditor?.enabled && showResourceSchema" (click)="applyResourceJsonSchema()">Apply Schema</button>
+      <button class="mx-2 btn btn-primary" *ngIf="options?.renderer?.submissionPanel?.schemaJsonEditor?.enabled && showResourceSchema" (click)="showSubmissionPanel(submission)">Regenerate Schema</button>
     </div>
   </div>
 </div>
-

@@ -5,33 +5,33 @@ import { FormioEditorOptions, FormioEditorTab } from './formio-editor-options';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { JsonEditorValidationError, JsonEditorOptions } from './json-editor/json-editor-shapes';
 import { merge, clone } from './clone-utils';
+import { generateFormJsonSchema } from './resource-json-schema/json-schema-generator';
 import { loose as formioJsonSchema } from './formio-json-schema';
 
-const defaultOptions: FormioEditorOptions = {
-  tabs: ['builder', 'json', 'renderer'],
-  tab: 'builder',
-  builder: {
-    hideDisplaySelect: false
-  },
-  json: {
-    changePanelLocations: ['top', 'bottom'],
-    editor: {
-      enableSort: true,
-      enableTransform: true,
-      escapeUnicode: false,
-      expandAll: false,
-      history: true,
-      indentation: 2,
-      limitDragging: false,
-      mode: 'view', // set default mode
-      modes: ['code', 'tree', 'view'], // set allowed modes
-      schema: formioJsonSchema.schema,
-      schemaRefs: formioJsonSchema.schemaRefs,
-      search: true,
-      sortObjectKeys: false
-    }
-  }
+const defaultJsonEditorOptions: JsonEditorOptions = {
+  enableSort: true,
+  enableTransform: true,
+  escapeUnicode: false,
+  expandAll: false,
+  history: true,
+  indentation: 2,
+  limitDragging: false,
+  mode: 'view', // set default mode
+  modes: ['code', 'tree', 'view'], // set allowed modes
+  schema: formioJsonSchema.schema,
+  schemaRefs: formioJsonSchema.schemaRefs,
+  search: true,
+  sortObjectKeys: false
 };
+
+const defaultRendererResourceJsonEditorOptions: JsonEditorOptions = merge(defaultJsonEditorOptions, {
+  mode: 'tree', // set default mode
+  modes: ['code', 'tree'], // set allowed modes
+  schema: undefined,
+  schemaRefs: undefined
+});
+
+const defaultRendererSchemaJsonEditorOptions: JsonEditorOptions = clone(defaultRendererResourceJsonEditorOptions);
 
 @Component({
   // tslint:disable-next-line:component-selector
@@ -50,11 +50,28 @@ export class FormioEditorComponent implements OnInit, AfterViewInit, OnDestroy  
   private _options: FormioEditorOptions;
   get options() { return this._options; }
   @Input() set options(options: FormioEditorOptions) { this.setOptions(options); }
-
+  jsonEditorOptions: JsonEditorOptions;
   jsonEditorChanged = false;
   @ViewChild('jsoneditor', {static: true}) jsonEditor: JsonEditorComponent;
 
-  activeTab: FormioEditorTab;
+  @ViewChild('renderer_resource_jsoneditor', {static: false}) rendererResourceJsonEditor: JsonEditorComponent;
+  @ViewChild('renderer_schema_jsoneditor', {static: false}) rendererSchemaJsonEditor: JsonEditorComponent;
+  rendererResourceJsonEditorOptions: JsonEditorOptions;
+  rendererSchemaJsonEditorOptions: JsonEditorOptions;
+  submissionPanel: boolean;
+  showResourceSchema: boolean;
+  submission: any;
+  fullSubmission: boolean;
+
+  // tslint:disable-next-line:variable-name
+  private _activeTab: FormioEditorTab;
+  get activeTab() { return this._activeTab; }
+  set activeTab(tab: FormioEditorTab) {
+    this._activeTab = tab;
+    if (tab === 'renderer') {
+      this.submissionPanel = false; // Disable submission panel when the renderer tab becomes active
+    }
+  }
 
   modalRef: BsModalRef;
 
@@ -83,7 +100,8 @@ export class FormioEditorComponent implements OnInit, AfterViewInit, OnDestroy  
       this.setOptions(); // Set default options
     }
 
-    this.activeTab = this.options.tab;
+    this.activeTab = (['builder', 'json', 'renderer'] as FormioEditorTab[])
+          .find(t => this.options && this.options[t]?.defaultTab ? t : undefined) || 'builder';
 
     if (this.reset) {
       this.resetSubscription = this.reset.subscribe(() => this.resetFormBuilder());
@@ -101,31 +119,20 @@ export class FormioEditorComponent implements OnInit, AfterViewInit, OnDestroy  
   }
 
   private setOptions(options: FormioEditorOptions = {}) {
-    const opts: FormioEditorOptions = merge(defaultOptions, options);
-
-    // Check options consistency
-    if (Array.isArray(opts.tabs)) {
-      opts.tabs = opts.tabs.filter(t => {
-        if (!defaultOptions.tabs.includes(t)) {
-          console.log(`FormioEditorComponent: unknown tab '${t}' in 'options.tabs'`);
-          return false;
-        }
-        return true;
-      });
-    } else {
-      opts.tabs = [];
-    }
-    if (opts.tabs.length === 0) {
-      console.log(`FormioEditorComponent: 'options.tabs' must be a non empty array`);
-      opts.tabs = clone(defaultOptions.tabs);
-    }
-    opts.tab = !opts.tab || !opts.tabs.includes(opts.tab) ? opts.tabs[0] : opts.tab;
-    const cpl = opts.json.changePanelLocations;
-    if (!Array.isArray(cpl) || !cpl.some(p => defaultOptions.json.changePanelLocations.includes(p))) {
-      opts.json.changePanelLocations = clone(defaultOptions.json.changePanelLocations);
-    }
-
-    this._options = opts;
+    this._options = options;
+    this.jsonEditorOptions = merge(
+      defaultJsonEditorOptions,
+      options?.json?.input?.options
+    );
+    this.rendererResourceJsonEditorOptions = merge(
+      defaultRendererResourceJsonEditorOptions,
+      options?.renderer?.submissionPanel?.resourceJsonEditor?.input?.options
+    );
+    this.rendererSchemaJsonEditorOptions = merge(
+      defaultRendererSchemaJsonEditorOptions,
+      options?.renderer?.submissionPanel?.schemaJsonEditor?.input?.options
+    );
+    this.fullSubmission = options?.renderer?.submissionPanel?.fullSubmission;
   }
 
   //
@@ -195,14 +202,14 @@ export class FormioEditorComponent implements OnInit, AfterViewInit, OnDestroy  
     this.refreshJsonEditor();
   }
 
-  refreshJsonEditor(resetMode: boolean = false) {
+  refreshJsonEditor(forceReset: boolean = false) {
     console.log('refreshJsonEditor');
+    if (forceReset) {
+      this.jsonEditor.reset(true);
+    }
     // Here we use update instead of set to preserve the editor status
     this.jsonEditor.update(this.form);
     this.jsonEditorChanged = false;
-    if (resetMode) {
-      this.jsonEditor.resetMode();
-    }
   }
 
   //
@@ -220,4 +227,26 @@ export class FormioEditorComponent implements OnInit, AfterViewInit, OnDestroy  
     }
   }
 
+  showSubmissionPanel(submission: any) {
+    this.submissionPanel = !this.options.renderer?.submissionPanel?.disabled;
+    if (this.submissionPanel) {
+      if (submission) {
+        this.submission = submission;
+      }
+      setTimeout(() => {
+        let schema = generateFormJsonSchema(this.form);
+        if (this.fullSubmission) {
+          schema = { type: 'object', properties: { data: schema } };
+        }
+        this.rendererResourceJsonEditor.setSchema(undefined);
+        this.rendererResourceJsonEditor.set(this.fullSubmission ? this.submission : this.submission.data);
+        this.rendererSchemaJsonEditor.set(schema as JSON);
+        this.rendererResourceJsonEditor.setSchema(schema);
+      });
+    }
+  }
+  applyResourceJsonSchema() {
+    const schema = this.rendererSchemaJsonEditor.get();
+    this.rendererResourceJsonEditor.setSchema(schema);
+  }
 }
